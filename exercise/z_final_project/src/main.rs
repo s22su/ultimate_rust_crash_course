@@ -25,6 +25,8 @@
 //
 //     let positive_number: u32 = some_string.parse().expect("Failed to parse a number");
 
+use image::DynamicImage;
+
 fn main() {
     // 1. First, you need to implement some basic command-line argument handling
     // so you can make your program do different things.  Here's a little bit
@@ -40,18 +42,43 @@ fn main() {
     match subcommand.as_str() {
         // EXAMPLE FOR CONVERSION OPERATIONS
         "blur" => {
-            if args.len() != 2 {
+            if args.len() != 3 {
                 print_usage_and_exit();
             }
+
             let infile = args.remove(0);
             let outfile = args.remove(0);
-            // **OPTION**
-            // Improve the blur implementation -- see the blur() function below
-            blur(infile, outfile);
+
+            let sigma: f32 = match args.remove(0).parse() {
+                Ok(sigma) => sigma,
+                Err(error) => {
+                    println!("sigma should be convertable to float, but it's not!");
+                    std::process::exit(-1);
+                }
+            };
+
+            blur(infile, outfile, sigma);
         }
 
         // **OPTION**
         // Brighten -- see the brighten() function below
+        "brighten" => {
+            if args.len() != 3 {
+                print_usage_and_exit();
+            }
+            let infile = args.remove(0);
+            let outfile = args.remove(0);
+
+            let level: i32 = match args.remove(0).parse() {
+                Ok(sigma) => sigma,
+                Err(error) => {
+                    println!("sigma should be convertable to int, but it's not!");
+                    std::process::exit(-1);
+                }
+            };
+
+            brighten(infile, outfile, level)
+        }
 
         // **OPTION**
         // Crop -- see the crop() function below
@@ -61,6 +88,15 @@ fn main() {
 
         // **OPTION**
         // Invert -- see the invert() function below
+        "invert" => {
+            if args.len() != 2 {
+                print_usage_and_exit();
+            }
+            let infile = args.remove(0);
+            let outfile = args.remove(0);
+
+            invert(infile, outfile)
+        }
 
         // **OPTION**
         // Grayscale -- see the grayscale() function below
@@ -86,7 +122,9 @@ fn main() {
 
 fn print_usage_and_exit() {
     println!("USAGE (when in doubt, use a .png extension on your filenames)");
-    println!("blur INFILE OUTFILE");
+    println!("blur INFILE OUTFILE SIGMA");
+    println!("brighten INFILE OUTFILE LEVEL");
+    println!("invert INFILE OUTFILE");
     println!("fractal OUTFILE");
     // **OPTION**
     // Print useful information about what subcommands and arguments you can use
@@ -94,25 +132,18 @@ fn print_usage_and_exit() {
     std::process::exit(-1);
 }
 
-fn blur(infile: String, outfile: String) {
-    // Here's how you open an existing image file
-    let img = image::open(infile).expect("Failed to open INFILE.");
-    // **OPTION**
-    // Parse the blur amount (an f32) from the command-line and pass it through
-    // to this function, instead of hard-coding it to 2.0.
-    let img2 = img.blur(2.0);
-    // Here's how you save an image to a file.
-    img2.save(outfile).expect("Failed writing OUTFILE.");
+fn blur(infile: String, outfile: String, sigma: f32) {
+    let img = open_file(infile);
+    let img2 = img.blur(sigma);
+
+    save_file(outfile, img2)
 }
 
-fn brighten(infile: String, outfile: String) {
-    // See blur() for an example of how to open / save an image.
+fn brighten(infile: String, outfile: String, level: i32) {
+    let img = open_file(infile);
+    let img2 = img.brighten(level);
 
-    // .brighten() takes one argument, an i32.  Positive numbers brighten the
-    // image. Negative numbers darken it.  It returns a new image.
-
-    // Challenge: parse the brightness amount from the command-line and pass it
-    // through to this function.
+    save_file(outfile, img2)
 }
 
 fn crop(infile: String, outfile: String) {
@@ -143,12 +174,9 @@ fn rotate(infile: String, outfile: String) {
 }
 
 fn invert(infile: String, outfile: String) {
-    // See blur() for an example of how to open an image.
-
-    // .invert() takes no arguments and converts the image in-place, so you
-    // will use the same image to save out to a different file.
-
-    // See blur() for an example of how to save the image.
+    let mut img = open_file(infile);
+    img.invert();
+    save_file(outfile, img)
 }
 
 fn grayscale(infile: String, outfile: String) {
@@ -210,6 +238,14 @@ fn fractal(outfile: String) {
     imgbuf.save(outfile).unwrap();
 }
 
+fn open_file(infile: String) -> DynamicImage {
+    let img = image::open(infile).expect("Failed to open INFILE.");
+    img
+}
+
+fn save_file(outfile: String, img: DynamicImage) {
+    img.save(outfile).expect("Failed writing OUTFILE.");
+}
 // **SUPER CHALLENGE FOR LATER** - Let's face it, you don't have time for this during class.
 //
 // Make all of the subcommands stackable!
